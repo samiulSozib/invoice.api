@@ -5,9 +5,14 @@ const countryRoute=require('./countryRoute')
 const noteRote=require('./noteRoute')
 const clientCustomerRoute=require('./clientCustomerRoute')
 const businessEmailRoute=require('./businessEmailRoute')
+const shopRoute=require('./shopRoute')
 
 
 const routes = [
+    {
+        path:'/shops',
+        handler:shopRoute
+    },
     {
         path:'/business-emails',
         handler:businessEmailRoute
