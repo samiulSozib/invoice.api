@@ -1,17 +1,17 @@
 const { Sequelize, DataTypes } = require('sequelize')
 
-// const sequelize = new Sequelize('samiulcs_invoice', 'samiulcs_invoice', 'R?OraWfgUqSK', {
-//     host: 'localhost',
-//     dialect: 'mysql',
-//     pool: { max: 5, min: 0, idle: 10000 }
-// })
-
-const sequelize = new Sequelize('invoice', 'root', '', {
+const sequelize = new Sequelize('samiulcs_invoice', 'samiulcs_invoice', 'R?OraWfgUqSK', {
     host: 'localhost',
-    logging: true,
     dialect: 'mysql',
     pool: { max: 5, min: 0, idle: 10000 }
 })
+
+// const sequelize = new Sequelize('invoice', 'root', '', {
+//     host: 'localhost',
+//     logging: true,
+//     dialect: 'mysql',
+//     pool: { max: 5, min: 0, idle: 10000 }
+// })
 
 sequelize.authenticate()
     .then(() => {
