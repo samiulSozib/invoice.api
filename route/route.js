@@ -6,9 +6,19 @@ const noteRote=require('./noteRoute')
 const clientCustomerRoute=require('./clientCustomerRoute')
 const businessEmailRoute=require('./businessEmailRoute')
 const shopRoute=require('./shopRoute')
+const productCategoriesRoute=require('./productCategoryRoute')
+const productRoute=require('./productRoute')
 
 
 const routes = [
+    {
+        path:'/products',
+        handler:productRoute
+    },
+    {
+        path:'/product-categories',
+        handler:productCategoriesRoute
+    },
     {
         path:'/shops',
         handler:shopRoute
