@@ -340,3 +340,29 @@ exports.getClientsByBusinessOwner = async (req, res, next) => {
     return res.status(500).json({ status: false, message: 'Server Error', clients: [] });
   }
 };
+
+
+// delete client 
+exports.deleteClient=async(req,res,next)=>{
+    const transactionScope = await sequelize.transaction();
+        const { client_id } = req.params; 
+        
+    
+        try {
+            const client = await db.client.findByPk(client_id, { transaction: transactionScope });
+    
+            if (!client) {
+                return res.status(404).json({ status: false, message: 'Client not found' });
+            }
+    
+            await client.destroy({ transaction: transactionScope });
+    
+            await transactionScope.commit();
+    
+            return res.status(200).json({ status: true, message: 'Client deleted successfully' });
+        } catch (error) {
+            if (transactionScope) await transactionScope.rollback();
+            console.error(error);
+            return res.status(503).json({ status: false, message: 'Internal Server Error' });
+        }
+}

@@ -8,9 +8,14 @@ const businessEmailRoute=require('./businessEmailRoute')
 const shopRoute=require('./shopRoute')
 const productCategoriesRoute=require('./productCategoryRoute')
 const productRoute=require('./productRoute')
+const invoiceRoute=require('./invoiceRoute')
 
 
 const routes = [
+    {
+        path:'/invoice',
+        handler:invoiceRoute
+    },
     {
         path:'/products',
         handler:productRoute

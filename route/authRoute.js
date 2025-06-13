@@ -8,7 +8,8 @@ const {
     updateClientProfile,
     getBusinessProfile,
     getClientProfile,
-    getClientsByBusinessOwner
+    getClientsByBusinessOwner,
+    deleteClient
 }=require('../controller/authController')
 const authenticateToken = require('../middleware/authMiddleware')
 const upload = require('../middleware/upload')
@@ -23,6 +24,7 @@ router.post('/update-client-profile',authenticateToken,updateClientProfile)
 router.get('/get-business-profile',authenticateToken,getBusinessProfile)
 router.get('/get-client-profile',authenticateToken,getClientProfile)
 router.get('/get-clients',authenticateToken,getClientsByBusinessOwner)
+router.delete('/delete-client/:client_id',authenticateToken,deleteClient)
 
 
 module.exports=router
