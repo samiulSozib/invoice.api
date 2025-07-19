@@ -55,6 +55,12 @@ exports.getInvoiceList = async (req, res, next) => {
       include:[
         {
           model:db.invoiceItem
+        },
+        {
+          model:db.client
+        },
+        {
+          model:db.shop
         }
       ],
       transaction: transactionScope,
@@ -101,6 +107,12 @@ exports.getInvoiceById = async (req, res, next) => {
       include: [
         {
           model: db.invoiceItem,
+        },
+        {
+          model:db.client
+        },
+        {
+          model:db.shop
         }
       ],
       transaction: transactionScope,

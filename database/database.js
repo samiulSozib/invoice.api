@@ -81,6 +81,10 @@ db.invoice.belongsTo(db.client, { foreignKey: 'client_id' });
 db.invoice.hasMany(db.invoiceItem, { foreignKey: 'invoice_id', onDelete: 'CASCADE' });
 db.invoiceItem.belongsTo(db.invoice, { foreignKey: 'invoice_id' });
 
+// Invoice - shop
+db.shop.hasMany(db.invoice, { foreignKey: 'shop_id', onDelete: 'CASCADE' });
+db.invoice.belongsTo(db.shop, { foreignKey: 'shop_id' });
+
 // product -- product category
 db.productCategory.hasMany(db.product,{foreignKey:'product_category_id',onDelete:'CASCADE'})
 db.product.belongsTo(db.productCategory,{foreignKey:'product_category_id'})
