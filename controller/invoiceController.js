@@ -52,8 +52,13 @@ exports.getInvoiceList = async (req, res, next) => {
       where: whereClause,
       offset,
       limit,
+      include:[
+        {
+          model:db.invoiceItem
+        }
+      ],
       transaction: transactionScope,
-      order: [['date', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     await transactionScope.commit();

@@ -27,15 +27,11 @@ module.exports = (sequelize, DataTypes) => {
         status: {
             type: DataTypes.STRING
         },
-        date:{
-            type:DataTypes.DATE
-        },
+       
         shipping_cost:{
             type:DataTypes.FLOAT
         },
-        over_due:{
-            type:DataTypes.FLOAT
-        },
+       
         payable_date:{
             type:DataTypes.DATE
         }
