@@ -1,7 +1,9 @@
 const router=require('express').Router()
-const {getInvoiceList, getInvoiceById, createInvoice, getInvoiceListByClientId}=require('../controller/invoiceController')
+const {getInvoiceList, getInvoiceById, createInvoice, getInvoiceListByClientId,payDue}=require('../controller/invoiceController')
 const authenticateToken = require('../middleware/authMiddleware')
 
+
+router.post('/pay-due/:invoice_id',authenticateToken,payDue)
 
 router.get('/invoice-list',authenticateToken,getInvoiceList)
 router.get('/:invoice_id',authenticateToken,getInvoiceById)

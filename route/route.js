@@ -9,9 +9,14 @@ const shopRoute=require('./shopRoute')
 const productCategoriesRoute=require('./productCategoryRoute')
 const productRoute=require('./productRoute')
 const invoiceRoute=require('./invoiceRoute')
+const transactionLogRoute=require('./transactionLogRoute')
 
 
 const routes = [
+    {
+        path:'/transaction-log',
+        handler:transactionLogRoute
+    },
     {
         path:'/invoice',
         handler:invoiceRoute

@@ -4,29 +4,79 @@ const db=require('../database/database')
 
 
 // get products 
-exports.getProducts = async (req, res, next) => {
-  const transactionScope = await sequelize.transaction();
-  const business_owner_id = req.business_owner_id;
 
-  // pagination
-  const page = parseInt(req.query.page) || 1;
-  const item_per_page = parseInt(req.query.item_per_page) || 20;
-  const offset = (page - 1) * item_per_page;
-  const limit = item_per_page;
 
+exports.getProducts = async (req, res) => {
   try {
+    const business_owner_id = req.business_owner_id;
+
+    let {
+      page = 1,
+      item_per_page = 20,
+      product_category_id,
+      min_price,
+      max_price,
+      search,
+      sort_by = "createdAt",
+      order = "DESC"
+    } = req.query;
+
+    page = parseInt(page);
+    item_per_page = parseInt(item_per_page);
+
+    const offset = (page - 1) * item_per_page;
+    const limit = item_per_page;
+
+    const whereClause = { business_owner_id };
+
+    // ---------------- Category Filter ----------------
+    if (product_category_id) {
+      whereClause.product_category_id = product_category_id;
+    }
+
+    // ---------------- Price Range Filter ----------------
+    if (min_price && max_price) {
+      whereClause.unit_price = {
+        [Op.between]: [parseFloat(min_price), parseFloat(max_price)],
+      };
+    } else if (min_price) {
+      whereClause.unit_price = { [Op.gte]: parseFloat(min_price) };
+    } else if (max_price) {
+      whereClause.unit_price = { [Op.lte]: parseFloat(max_price) };
+    }
+
+    // ---------------- Search by Name ----------------
+    if (search) {
+      whereClause.name = {
+        [Op.like]: `%${search}%`
+      };
+    }
+
+    // ---------------- Allowed Sorting Columns ----------------
+    const allowedSortFields = [
+      "name",
+      "unit_price",
+      "createdAt",
+      "updatedAt"
+    ];
+
+    if (!allowedSortFields.includes(sort_by)) {
+      sort_by = "createdAt";
+    }
+
+    order = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
-      where: { business_owner_id },
+      where: whereClause,
       offset,
       limit,
-      transaction: transactionScope,
+      order: [[sort_by, order]],
     });
-
-    await transactionScope.commit();
 
     return res.status(200).json({
       status: true,
-      message: '',
+      message: "Products fetched successfully",
       products,
       pagination: {
         total_items: count,
@@ -37,43 +87,88 @@ exports.getProducts = async (req, res, next) => {
     });
 
   } catch (error) {
-    if (transactionScope) await transactionScope.rollback();
-    console.log(error);
-    return res.status(503).json({ status: false, message: 'Internal Server Error', products: [] });
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+      products: [],
+    });
   }
 };
 
 
 // get products by category id
-exports.getProductsByCategoryId = async (req, res, next) => {
-  const transactionScope = await sequelize.transaction();
-  const product_category_id = req.params.category_id;
-  const business_owner_id = req.business_owner_id;
 
-  // pagination
-  const page = parseInt(req.query.page) || 1;
-  const item_per_page = parseInt(req.query.item_per_page) || 20;
-  const offset = (page - 1) * item_per_page;
-  const limit = item_per_page;
-
+exports.getProductsByCategoryId = async (req, res) => {
   try {
+    const product_category_id = parseInt(req.params.category_id);
+    const business_owner_id = req.business_owner_id;
+
+    let {
+      page = 1,
+      item_per_page = 20,
+      min_price,
+      max_price,
+      search,
+      sort_by = "createdAt",
+      order = "DESC"
+    } = req.query;
+
+    page = parseInt(page);
+    item_per_page = parseInt(item_per_page);
+
+    const offset = (page - 1) * item_per_page;
+    const limit = item_per_page;
+
+    // ---------------- Base Where Clause ----------------
+    const whereClause = {
+      business_owner_id,
+      product_category_id
+    };
+
+    // ---------------- Price Filter ----------------
+    if (min_price && max_price) {
+      whereClause.unit_price = {
+        [Op.between]: [parseFloat(min_price), parseFloat(max_price)],
+      };
+    } else if (min_price) {
+      whereClause.unit_price = { [Op.gte]: parseFloat(min_price) };
+    } else if (max_price) {
+      whereClause.unit_price = { [Op.lte]: parseFloat(max_price) };
+    }
+
+    // ---------------- Search ----------------
+    if (search) {
+      whereClause.name = {
+        [Op.like]: `%${search}%`
+      };
+    }
+
+    // ---------------- Safe Sorting ----------------
+    const allowedSortFields = [
+      "name",
+      "unit_price",
+      "createdAt",
+      "updatedAt"
+    ];
+
+    if (!allowedSortFields.includes(sort_by)) {
+      sort_by = "createdAt";
+    }
+
+    order = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
-      where: {
-        [Op.and]: [
-          { product_category_id },
-          { business_owner_id },
-        ]
-      },
+      where: whereClause,
       offset,
       limit,
-      transaction: transactionScope,
+      order: [[sort_by, order]],
     });
-
-    await transactionScope.commit();
 
     return res.status(200).json({
       status: true,
-      message: '',
+      message: "Products fetched successfully",
       products,
       pagination: {
         total_items: count,
@@ -84,9 +179,12 @@ exports.getProductsByCategoryId = async (req, res, next) => {
     });
 
   } catch (error) {
-    if (transactionScope) await transactionScope.rollback();
-    console.log(error);
-    return res.status(503).json({ status: false, message: 'Internal Server Error', products: [] });
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+      products: [],
+    });
   }
 };
 

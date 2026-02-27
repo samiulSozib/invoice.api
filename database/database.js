@@ -1,17 +1,17 @@
 const { Sequelize, DataTypes } = require('sequelize')
 
-const sequelize = new Sequelize('samiulcs_invoice', 'samiulcs_invoice', 'R?OraWfgUqSK', {
-    host: 'localhost',
-    dialect: 'mysql',
-    pool: { max: 5, min: 0, idle: 10000 }
-})
-
-// const sequelize = new Sequelize('invoice', 'root', '', {
+// const sequelize = new Sequelize('samiulcs_invoice', 'samiulcs_invoice', 'R?OraWfgUqSK', {
 //     host: 'localhost',
-//     logging: true,
 //     dialect: 'mysql',
 //     pool: { max: 5, min: 0, idle: 10000 }
 // })
+
+const sequelize = new Sequelize('invoice', 'root', '', {
+    host: 'localhost',
+    logging: true,
+    dialect: 'mysql',
+    pool: { max: 5, min: 0, idle: 10000 }
+})
 
 sequelize.authenticate()
     .then(() => {
@@ -51,6 +51,7 @@ db.productCategory=require("../model/productCategory")(sequelize,DataTypes)
 db.product=require("../model/product")(sequelize,DataTypes)
 db.shop=require("../model/shop")(sequelize,DataTypes)
 db.productImage=require("../model/product_image")(sequelize,DataTypes)
+db.transactionLog=require("../model/transactionLog")(sequelize,DataTypes)
 
 
 
@@ -100,6 +101,19 @@ db.businessOwner.hasMany(db.product,{foreignKey:'business_owner_id',onDelete:'CA
 db.product.belongsTo(db.businessOwner,{foreignKey:'business_owner_id'})
 
 
+// TransactionLog associations
+
+// A TransactionLog belongs to a BusinessOwner
+db.businessOwner.hasMany(db.transactionLog, { foreignKey: 'business_owner_id', onDelete: 'CASCADE' });
+db.transactionLog.belongsTo(db.businessOwner, { foreignKey: 'business_owner_id' });
+
+// A TransactionLog belongs to a Client
+db.client.hasMany(db.transactionLog, { foreignKey: 'client_id', onDelete: 'CASCADE' });
+db.transactionLog.belongsTo(db.client, { foreignKey: 'client_id' });
+
+// A TransactionLog belongs to an Invoice
+db.invoice.hasMany(db.transactionLog, { foreignKey: 'invoice_id', onDelete: 'CASCADE' });
+db.transactionLog.belongsTo(db.invoice, { foreignKey: 'invoice_id' });
 
 
 // relationd

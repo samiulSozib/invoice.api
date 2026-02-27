@@ -1,91 +1,130 @@
-const { Op, where } = require("sequelize");
-const { sequelize } = require("../database/database");
+const { Op } = require("sequelize");
 const db = require("../database/database");
+const { sequelize } = require('../database/database')
 
 
-// get invoice list
-exports.getInvoiceList = async (req, res, next) => {
-  const transactionScope = await sequelize.transaction();
-  const business_owner_id = req.business_owner_id;
-
-  const {
-    page = 1,
-    item_per_page = 20,
-    status,
-    client_id,
-    shop_id,
-    from_date,
-    to_date,
-    search
-  } = req.query;
-
-  const offset = (page - 1) * item_per_page;
-  const limit = parseInt(item_per_page);
-
-  const whereClause = { business_owner_id };
-
-  if (status) whereClause.status = status;
-  if (client_id) whereClause.client_id = client_id;
-  if (shop_id) whereClause.shop_id = shop_id;
-
-  if (from_date && to_date) {
-    whereClause.date = {
-      [Op.between]: [new Date(from_date), new Date(to_date)],
-    };
-  } else if (from_date) {
-    whereClause.date = { [Op.gte]: new Date(from_date) };
-  } else if (to_date) {
-    whereClause.date = { [Op.lte]: new Date(to_date) };
-  }
-
-  if (search) {
-    whereClause[Op.or] = [
-      { status: { [Op.iLike]: `%${search}%` } },
-      sequelize.where(sequelize.cast(sequelize.col("invoice.id"), 'TEXT'), {
-        [Op.iLike]: `%${search}%`
-      }),
-    ];
-  }
-
+// GET Invoice List
+exports.getInvoiceList = async (req, res) => {
   try {
-    const { count, rows: invoice_list } = await db.invoice.findAndCountAll({
+    const business_owner_id = req.business_owner_id;
+
+    let {
+      page = 1,
+      item_per_page = 20,
+      status,
+      client_id,
+      shop_id,
+      from_date,
+      to_date,
+      search,
+      search_by = "all"
+    } = req.query;
+
+    page = parseInt(page);
+    item_per_page = parseInt(item_per_page);
+
+    const offset = (page - 1) * item_per_page;
+    const limit = item_per_page;
+
+    const whereClause = { business_owner_id };
+
+    // -------------------------
+    // Filters
+    // -------------------------
+
+    if (status) whereClause.status = status;
+    if (client_id) whereClause.client_id = client_id;
+    if (shop_id) whereClause.shop_id = shop_id;
+
+    // Date Filter (createdAt)
+    if (from_date && to_date) {
+      whereClause.createdAt = {
+        [Op.between]: [new Date(from_date), new Date(to_date)],
+      };
+    } else if (from_date) {
+      whereClause.createdAt = { [Op.gte]: new Date(from_date) };
+    } else if (to_date) {
+      whereClause.createdAt = { [Op.lte]: new Date(to_date) };
+    }
+
+    // -------------------------
+    // Search (MySQL compatible)
+    // -------------------------
+
+    if (search) {
+      const searchCondition = {
+        [Op.like]: `%${search}%`
+      };
+
+      if (search_by !== "all") {
+        // Search specific column
+        whereClause[search_by] = searchCondition;
+      } else {
+        // Global Search
+        whereClause[Op.or] = [
+          { status: searchCondition },
+
+          // Search numeric fields safely (cast to CHAR)
+          db.sequelize.where(
+            db.sequelize.cast(db.sequelize.col("invoice.id"), "CHAR"),
+            searchCondition
+          ),
+          db.sequelize.where(
+            db.sequelize.cast(db.sequelize.col("invoice.total"), "CHAR"),
+            searchCondition
+          ),
+          db.sequelize.where(
+            db.sequelize.cast(db.sequelize.col("invoice.sub_total"), "CHAR"),
+            searchCondition
+          ),
+
+
+        ];
+      }
+    }
+
+    // -------------------------
+    // Query Execution
+    // -------------------------
+
+    const { count, rows } = await db.invoice.findAndCountAll({
       where: whereClause,
       offset,
       limit,
-      include:[
+      distinct: true,   // important when using include
+      col: "id",
+      include: [
         {
-          model:db.invoiceItem
+          model: db.invoiceItem,
         },
         {
-          model:db.client
+          model: db.client,
         },
         {
-          model:db.shop
-        }
+          model: db.shop,
+        },
       ],
-      transaction: transactionScope,
-      order: [['createdAt', 'DESC']]
+      order: [["createdAt", "DESC"]],
     });
-
-    await transactionScope.commit();
 
     return res.status(200).json({
       status: true,
-      message: "",
-      invoice_list,
+      message: "Invoice list fetched successfully",
+      invoice_list: rows,
       pagination: {
         total_items: count,
         total_pages: Math.ceil(count / item_per_page),
-        current_page: parseInt(page),
-        item_per_page: parseInt(item_per_page),
+        current_page: page,
+        item_per_page,
       },
     });
+
   } catch (error) {
-    if (transactionScope) await transactionScope.rollback();
-    console.log(error);
-    return res.status(503).json({
+    console.error(error);
+    return res.status(500).json({
       status: false,
       message: "Internal Server Error",
+      error: error.message,
       invoice_list: [],
     });
   }
@@ -109,10 +148,10 @@ exports.getInvoiceById = async (req, res, next) => {
           model: db.invoiceItem,
         },
         {
-          model:db.client
+          model: db.client
         },
         {
-          model:db.shop
+          model: db.shop
         }
       ],
       transaction: transactionScope,
@@ -214,6 +253,34 @@ exports.createInvoice = async (req, res, next) => {
       transaction: transactionScope,
     });
 
+    // 3️⃣ Update Business Owner Totals
+    await db.businessOwner.increment(
+      {
+        total_sales_amount: total || 0,
+        total_unpaid_amount: due || 0,
+      },
+      {
+        where: { id: business_owner_id },
+        transaction: transactionScope,
+      }
+    );
+
+    // 4️⃣ Create Transaction Log for Invoice Creation
+    await db.transactionLog.create({
+      business_owner_id,
+      client_id,
+      invoice_id: invoice.id,
+      type: 'invoice_created',
+      total: total || 0,
+      sub_total: sub_total || 0,
+      due_before: 0,           // invoice just created
+      payment_amount: 0,       // no payment yet
+      due_after: due || 0,
+      status,
+      note: `Invoice #${invoice.id} created with total ${total}, due ${due}.`,
+    }, { transaction: transactionScope });
+
+
     await transactionScope.commit();
 
     return res.status(201).json({
@@ -232,3 +299,117 @@ exports.createInvoice = async (req, res, next) => {
 };
 
 
+exports.payDue = async (req, res) => {
+  const transactionScope = await sequelize.transaction();
+  const business_owner_id = req.business_owner_id;
+
+  try {
+    const { invoice_id } = req.params;
+    const { payment_amount } = req.body;
+
+    if (!payment_amount || payment_amount <= 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Valid payment amount is required",
+      });
+    }
+
+    // 1️⃣ Find Invoice
+    const invoice = await db.invoice.findOne({
+      where: { id: invoice_id, business_owner_id },
+      transaction: transactionScope,
+    });
+
+    if (!invoice) {
+      await transactionScope.rollback();
+      return res.status(404).json({
+        status: false,
+        message: "Invoice not found",
+      });
+    }
+
+    if (invoice.due <= 0) {
+      await transactionScope.rollback();
+      return res.status(400).json({
+        status: false,
+        message: "Invoice already fully paid",
+      });
+    }
+
+    if (payment_amount > invoice.due) {
+      await transactionScope.rollback();
+      return res.status(400).json({
+        status: false,
+        message: "Payment exceeds due amount",
+      });
+    }
+
+    // 2️⃣ Calculate new due
+    const newDue = invoice.due - payment_amount;
+
+    let newStatus = "partial";
+    if (newDue === 0) {
+      newStatus = "paid";
+    }
+
+    // 3️⃣ Update Invoice
+    await invoice.update(
+      {
+        due: newDue,
+        status: newStatus,
+      },
+      { transaction: transactionScope }
+    );
+
+    // 4️⃣ Update Client total_due
+    await db.client.decrement(
+      { total_due: payment_amount },
+      {
+        where: { id: invoice.client_id },
+        transaction: transactionScope,
+      }
+    );
+
+    // 5️⃣ Update Business Owner total_unpaid_amount
+    await db.businessOwner.decrement(
+      { total_unpaid_amount: payment_amount },
+      {
+        where: { id: business_owner_id },
+        transaction: transactionScope,
+      }
+    );
+
+    // 6️⃣ Create Transaction Log for Payment
+    await db.transactionLog.create({
+      business_owner_id,
+      client_id: invoice.client_id,
+      invoice_id: invoice.id,
+      type: 'payment',
+      total: invoice.total,
+      sub_total: invoice.sub_total,
+      due_before: invoice.due,      // before payment
+      payment_amount,
+      due_after: newDue,
+      status: newStatus,
+      note: `Payment of ${payment_amount} received for Invoice #${invoice.id}.`,
+    }, { transaction: transactionScope });
+
+    await transactionScope.commit();
+
+    return res.status(200).json({
+      status: true,
+      message: newStatus === "paid"
+        ? "Invoice fully paid"
+        : "Partial payment successful",
+      remaining_due: newDue,
+    });
+
+  } catch (error) {
+    if (transactionScope) await transactionScope.rollback();
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+};

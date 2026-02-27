@@ -307,25 +307,51 @@ exports.getClientProfile = async (req, res, next) => {
 };
 
 // get client by business owner
-exports.getClientsByBusinessOwner = async (req, res, next) => {
-  const business_owner_id = req.business_owner_id;
 
-  // Pagination
-  const page = parseInt(req.query.page) || 1;
-  const item_per_page = parseInt(req.query.item_per_page) || 20;
-  const offset = (page - 1) * item_per_page;
-  const limit = item_per_page;
 
+exports.getClientsByBusinessOwner = async (req, res) => {
   try {
+    const business_owner_id = req.business_owner_id;
+
+    // ---------------- Pagination ----------------
+    let { page = 1, item_per_page = 20, search } = req.query;
+
+    page = parseInt(page);
+    item_per_page = parseInt(item_per_page);
+
+    const offset = (page - 1) * item_per_page;
+    const limit = item_per_page;
+
+    // ---------------- Where Clause ----------------
+    const whereClause = { business_owner_id };
+
+    // Search by name or phone
+    if (search) {
+      whereClause[Op.or] = [
+        {
+          name: {
+            [Op.like]: `%${search}%`
+          }
+        },
+        {
+          phone_number: {
+            [Op.like]: `%${search}%`
+          }
+        }
+      ];
+    }
+
+    // ---------------- Query ----------------
     const { count, rows: clients } = await db.client.findAndCountAll({
-      where: { business_owner_id },
+      where: whereClause,
       offset,
       limit,
+      order: [["name", "ASC"]],
     });
 
     return res.status(200).json({
       status: true,
-      message: 'Clients retrieved successfully',
+      message: "Clients retrieved successfully",
       clients,
       pagination: {
         total_items: count,
@@ -336,8 +362,12 @@ exports.getClientsByBusinessOwner = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ status: false, message: 'Server Error', clients: [] });
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      clients: [],
+    });
   }
 };
 
