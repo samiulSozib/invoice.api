@@ -20,6 +20,6 @@ setMiddlewares(app)
 setRoutes(app)
 require('./util/scheduler')
 
-app.listen(3333, () => {
+app.listen(3334, () => {
     console.log('server create success on port 3333')
 })

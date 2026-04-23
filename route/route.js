@@ -10,9 +10,29 @@ const productCategoriesRoute=require('./productCategoryRoute')
 const productRoute=require('./productRoute')
 const invoiceRoute=require('./invoiceRoute')
 const transactionLogRoute=require('./transactionLogRoute')
+const supplierRoute=require('./supplierRoute')
+const resellerRoute=require('./resellerRoute')
+const topUpRoute=require('./topUpRouteTransactionRoute')
+const adminRoute=require('./adminRoute')
 
 
 const routes = [
+    {
+        path:'/admin',
+        handler:adminRoute
+    },
+    {
+        path:'/topup',
+        handler:topUpRoute
+    },
+    {
+        path:'/resellers',
+        handler:resellerRoute
+    },
+    {
+        path:'/suppliers',
+        handler:supplierRoute
+    },
     {
         path:'/transaction-log',
         handler:transactionLogRoute

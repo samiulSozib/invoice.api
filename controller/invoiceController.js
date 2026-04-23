@@ -26,7 +26,13 @@ exports.getInvoiceList = async (req, res) => {
     const offset = (page - 1) * item_per_page;
     const limit = item_per_page;
 
-    const whereClause = { business_owner_id };
+    const whereClause = {};
+
+        if (business_owner_id) {
+          whereClause.business_owner_id = business_owner_id;
+        }
+
+    // const whereClause = { business_owner_id };
 
     // -------------------------
     // Filters
@@ -87,6 +93,10 @@ exports.getInvoiceList = async (req, res) => {
     // Query Execution
     // -------------------------
 
+
+    // const invoices= await db.invoice.findAll()
+    // return res.json(invoices)
+
     const { count, rows } = await db.invoice.findAndCountAll({
       where: whereClause,
       offset,
@@ -106,6 +116,8 @@ exports.getInvoiceList = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+
+
 
     return res.status(200).json({
       status: true,
@@ -379,6 +391,16 @@ exports.payDue = async (req, res) => {
       }
     );
 
+
+        // 5️⃣ Update Business Owner totla seal
+    await db.businessOwner.increment(
+      { total_sales_amount: payment_amount },
+      {
+        where: { id: business_owner_id },
+        transaction: transactionScope,
+      }
+    );
+
     // 6️⃣ Create Transaction Log for Payment
     await db.transactionLog.create({
       business_owner_id,
@@ -413,3 +435,187 @@ exports.payDue = async (req, res) => {
     });
   }
 };
+
+
+// DELETE single invoice
+// DELETE single invoice
+exports.deleteInvoice = async (req, res) => {
+  const transactionScope = await sequelize.transaction();
+  const business_owner_id = req.business_owner_id;
+
+  try {
+    const { invoice_id } = req.params;
+
+    const invoice = await db.invoice.findOne({
+      where: { id: invoice_id, business_owner_id },
+      transaction: transactionScope,
+    });
+
+    if (!invoice) {
+      await transactionScope.rollback();
+      return res.status(404).json({
+        status: false,
+        message: "Invoice not found",
+      });
+    }
+
+    // 1️⃣ Create Transaction Log FIRST
+    await db.transactionLog.create({
+      business_owner_id,
+      client_id: invoice.client_id,
+      invoice_id: invoice.id,
+      type: "invoice_deleted",
+      total: invoice.total,
+      sub_total: invoice.sub_total,
+      due_before: invoice.due,
+      payment_amount: 0,
+      due_after: 0,
+      status: "deleted",
+      note: `Invoice #${invoice.id} deleted.`,
+    }, { transaction: transactionScope });
+
+    // 2️⃣ Update Business Owner totals
+    await db.businessOwner.decrement(
+      {
+        total_sales_amount: invoice.total || 0,
+        total_unpaid_amount: invoice.due || 0,
+      },
+      {
+        where: { id: business_owner_id },
+        transaction: transactionScope,
+      }
+    );
+
+    // 3️⃣ Update Client total_due
+    await db.client.decrement(
+      { total_due: invoice.due || 0 },
+      {
+        where: { id: invoice.client_id },
+        transaction: transactionScope,
+      }
+    );
+
+    // 4️⃣ Delete invoice items
+    await db.invoiceItem.destroy({
+      where: { invoice_id: invoice.id },
+      transaction: transactionScope,
+    });
+
+    // 5️⃣ Delete invoice
+    await invoice.destroy({ transaction: transactionScope });
+
+    await transactionScope.commit();
+
+    return res.status(200).json({
+      status: true,
+      message: "Invoice deleted successfully",
+    });
+
+  } catch (error) {
+    await transactionScope.rollback();
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+// DELETE multiple invoices
+// exports.deleteMultipleInvoices = async (req, res) => {
+//   const transactionScope = await sequelize.transaction();
+//   const business_owner_id = req.business_owner_id;
+
+//   try {
+//     const { invoice_ids } = req.body;
+
+//     if (!invoice_ids || !Array.isArray(invoice_ids) || invoice_ids.length === 0) {
+//       return res.status(400).json({
+//         status: false,
+//         message: "invoice_ids array is required",
+//       });
+//     }
+
+//     const invoices = await db.invoice.findAll({
+//       where: {
+//         id: { [Op.in]: invoice_ids },
+//         business_owner_id,
+//       },
+//       transaction: transactionScope,
+//     });
+
+//     if (invoices.length === 0) {
+//       await transactionScope.rollback();
+//       return res.status(404).json({
+//         status: false,
+//         message: "No invoices found",
+//       });
+//     }
+
+//     let totalSalesToDeduct = 0;
+//     let totalUnpaidToDeduct = 0;
+
+//     for (const invoice of invoices) {
+//       totalSalesToDeduct += invoice.total || 0;
+//       totalUnpaidToDeduct += invoice.due || 0;
+
+//       // Delete invoice items
+//       await db.invoiceItem.destroy({
+//         where: { invoice_id: invoice.id },
+//         transaction: transactionScope,
+//       });
+
+//       // Create log
+//       await db.transactionLog.create({
+//         business_owner_id,
+//         client_id: invoice.client_id,
+//         invoice_id: invoice.id,
+//         type: "invoice_deleted",
+//         total: invoice.total,
+//         sub_total: invoice.sub_total,
+//         due_before: invoice.due,
+//         payment_amount: 0,
+//         due_after: 0,
+//         status: "deleted",
+//         note: `Invoice #${invoice.id} deleted.`,
+//       }, { transaction: transactionScope });
+//     }
+
+//     // Update Business Owner totals once
+//     await db.businessOwner.decrement(
+//       {
+//         total_sales_amount: totalSalesToDeduct,
+//         total_unpaid_amount: totalUnpaidToDeduct,
+//       },
+//       {
+//         where: { id: business_owner_id },
+//         transaction: transactionScope,
+//       }
+//     );
+
+//     // Delete invoices
+//     await db.invoice.destroy({
+//       where: {
+//         id: { [Op.in]: invoice_ids },
+//         business_owner_id,
+//       },
+//       transaction: transactionScope,
+//     });
+
+//     await transactionScope.commit();
+
+//     return res.status(200).json({
+//       status: true,
+//       message: "Invoices deleted successfully",
+//     });
+
+//   } catch (error) {
+//     await transactionScope.rollback();
+//     console.error(error);
+//     return res.status(500).json({
+//       status: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };

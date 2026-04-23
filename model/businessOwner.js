@@ -26,6 +26,9 @@ module.exports = (sequelize, DataTypes) => {
         },
         date_of_birth:{
             type:DataTypes.CHAR(15)
+        },
+        status:{
+            type:DataTypes.BOOLEAN
         }
     }, {
         timestamps: true
