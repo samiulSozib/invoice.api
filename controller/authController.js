@@ -27,19 +27,19 @@ exports.signUp = async (req, res, next) => {
             return res.status(200).json({ status: false, message: 'User Already Exists With This Phone Number', business_owner: {} });
         }
 
-        
+
         // If user does not exist, create a new one
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const new_user = await db.businessOwner.create({
             phone_number,
             date_of_birth,
-            password:hashedPassword, 
-            
+            password:hashedPassword,
+
         }, { transaction: transactionScope });
 
-        
-      
+
+
 
         await transactionScope.commit();
 
@@ -58,7 +58,7 @@ exports.signIn=async(req,res,next)=>{
     let {phone_number,password}=req.body
     const transactionScope = await sequelize.transaction();
     try {
-  
+
         const user=await db.businessOwner.findOne({
             where:{
                 phone_number:phone_number
@@ -80,11 +80,11 @@ exports.signIn=async(req,res,next)=>{
 
         const token = jwt.sign({ business_owner_date: user.id, }, "tokenSecretKey")
 
-        
+
         await transactionScope.commit();
-  
+
         return res.status(200).json({status: true, message: 'Sign In Success',token:token, business_owner:user })
-  
+
     } catch (error) {
         if (transactionScope) await transactionScope.rollback();
       return res.status(500).json({status: false, message: 'Server Error', business_owner:{} })
@@ -113,7 +113,7 @@ exports.addClient = async (req, res, next) => {
             return res.status(200).json({ status: false, message: 'User Already Exists With This Phone Number', client: {} });
         }
 
-        
+
 
 
         const new_client=await db.client.create({
@@ -122,7 +122,7 @@ exports.addClient = async (req, res, next) => {
             phone_number,
             address:address
         },{transaction:transactionScope})
-      
+
 
         await transactionScope.commit();
 
@@ -151,12 +151,12 @@ exports.resetPassword=async(req,res,next)=>{
                     {
                         date_of_birth:date_of_birth
                     }
-                    
+
                 ]
             },
             transaction: transactionScope // Move transaction option here
         });
-        
+
 
         if(!user){
             await transactionScope.rollback()
@@ -173,13 +173,13 @@ exports.resetPassword=async(req,res,next)=>{
             },
         },{transaction:transactionScope})
 
-        
 
-        
+
+
         await transactionScope.commit();
-  
+
         return res.status(200).json({status: true, message: 'Password Update Success', business_owner:user })
-  
+
     } catch (error) {
         if (transactionScope) await transactionScope.rollback();
         console.log(error)
@@ -191,7 +191,7 @@ exports.resetPassword=async(req,res,next)=>{
 
 // update business profile
 exports.updateBusinessProfile = async (req, res, next) => {
-    const business_owner_id = req.business_owner_id; 
+    const business_owner_id = req.business_owner_id;
     const { name, address } = req.body;
     const transactionScope = await sequelize.transaction();
 
@@ -234,7 +234,7 @@ exports.updateBusinessProfile = async (req, res, next) => {
 
 // update client profile
 exports.updateClientProfile = async (req, res, next) => {
-    const {client_id, name, address } = req.body;
+    const {client_id, name, address,phone_number } = req.body;
     const transactionScope = await sequelize.transaction();
 
     try {
@@ -247,12 +247,13 @@ exports.updateClientProfile = async (req, res, next) => {
         }
 
 
-      
+
 
 
         // Update the user details
         await db.client.update({
             name,
+            phone_number,
             address
         }, {
             where: { id: client_id },
@@ -372,23 +373,23 @@ exports.getClientsByBusinessOwner = async (req, res) => {
 };
 
 
-// delete client 
+// delete client
 exports.deleteClient=async(req,res,next)=>{
     const transactionScope = await sequelize.transaction();
-        const { client_id } = req.params; 
-        
-    
+        const { client_id } = req.params;
+
+
         try {
             const client = await db.client.findByPk(client_id, { transaction: transactionScope });
-    
+
             if (!client) {
                 return res.status(404).json({ status: false, message: 'Client not found' });
             }
-    
+
             await client.destroy({ transaction: transactionScope });
-    
+
             await transactionScope.commit();
-    
+
             return res.status(200).json({ status: true, message: 'Client deleted successfully' });
         } catch (error) {
             if (transactionScope) await transactionScope.rollback();

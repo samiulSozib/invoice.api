@@ -6,11 +6,18 @@ const { Sequelize, DataTypes } = require('sequelize')
 //     pool: { max: 5, min: 0, idle: 10000 }
 // })
 
-const sequelize = new Sequelize('invoice', 'root', '', {
-    host: 'localhost',
-    logging: true,
-    dialect: 'mysql',
-    pool: { max: 5, min: 0, idle: 10000 }
+// const sequelize = new Sequelize('invoice', 'root', '', {
+//     host: 'localhost',
+//     logging: true,
+//     dialect: 'mysql',
+//     pool: { max: 5, min: 0, idle: 10000 }
+// })
+
+const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.DATABASE_USER, process.env.DATABASE_PASSWORD, {
+  host: 'localhost',
+  logging: true,
+  dialect: 'mysql',
+  pool: { max: 5, min: 0, idle: 10000 }
 })
 
 sequelize.authenticate()

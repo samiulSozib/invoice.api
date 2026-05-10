@@ -3,7 +3,7 @@ const {sequelize}=require('../database/database')
 const db=require('../database/database')
 
 
-// get products 
+// get products
 
 
 exports.getProducts = async (req, res) => {
@@ -69,6 +69,7 @@ exports.getProducts = async (req, res) => {
     // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
       where: whereClause,
+      include:[{model:db.productCategory}],
       offset,
       limit,
       order: [[sort_by, order]],
@@ -161,6 +162,7 @@ exports.getProductsByCategoryId = async (req, res) => {
     // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
       where: whereClause,
+      include:[{model:db.productCategory}],
       offset,
       limit,
       order: [[sort_by, order]],
@@ -192,7 +194,7 @@ exports.getProductsByCategoryId = async (req, res) => {
 exports.createProduct = async (req, res, next) => {
     const transactionScope = await sequelize.transaction();
     const business_owner_id=req.business_owner_id
- 
+
     const { product_category_id, name, unit_price,unit_of_measure } = req.body;
 
     try {
@@ -246,8 +248,8 @@ exports.editProduct = async (req, res, next) => {
 // Delete Product
 exports.deleteProduct = async (req, res, next) => {
     const transactionScope = await sequelize.transaction();
-    const { product_id } = req.params; 
-    
+    const { product_id } = req.params;
+
 
     try {
         const product = await db.product.findByPk(product_id, { transaction: transactionScope });
