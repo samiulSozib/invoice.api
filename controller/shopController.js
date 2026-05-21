@@ -1,41 +1,51 @@
-const {sequelize}=require('../database/database')
-const db=require('../database/database')
+const { sequelize } = require('../database/database')
+const db = require('../database/database')
 
 
 // get shops by user id
-exports.getShopsByBusinessOwnerId=async(req,res,next)=>{
+exports.getShopsByBusinessOwnerId = async (req, res, next) => {
     const transactionScope = await sequelize.transaction();
-    const business_owner_id=req.business_owner_id
-    try{
-        const shops=await db.shop.findAll({where:{business_owner_id:business_owner_id}},{
-            transaction:transactionScope
+    const business_owner_id = req.business_owner_id
+    try {
+        const shops = await db.shop.findAll({ where: { business_owner_id: business_owner_id,status: true } }, {
+            transaction: transactionScope
         })
-        
+
 
         await transactionScope.commit();
-  
-        return res.status(200).json({status: true, message: '', shops:shops })
-        
-    }catch(error){
+
+        return res.status(200).json({ status: true, message: '', shops: shops })
+
+    } catch (error) {
         if (transactionScope) await transactionScope.rollback();
         console.log(error)
-        return res.status(503).json({status:false,message:'Internal Server Error',shops:[]})
+        return res.status(503).json({ status: false, message: 'Internal Server Error', shops: [] })
     }
 }
 
 // Create Shop
 exports.createShop = async (req, res, next) => {
     const transactionScope = await sequelize.transaction();
-    const { name, address, phone_number_1,phone_number_2,website } = req.body;
-    const business_owner_id=req.business_owner_id
-    let logo=null
-    console.log(business_owner_id)
+    const { name, address, phone_number_1, phone_number_2, website } = req.body;
+    const business_owner_id = req.business_owner_id
+    const business_owner = req.business_owner
+    let logo = null
     try {
-        if(req.file){
-            logo=`/uploads/${req.file.filename}`
+
+        if (!business_owner.is_premium) {
+            const shopCount = await db.shop.count({ where: { business_owner_id: business_owner_id } });
+
+            if (shopCount >= 1) {
+                await transactionScope.rollback();
+                return res.status(400).json({ status: false, message: 'account limit reached', shop: {} });
+            }
+        }
+
+        if (req.file) {
+            logo = `/uploads/${req.file.filename}`
         }
         const shop = await db.shop.create(
-            { business_owner_id:business_owner_id, name,address,phone_number_1,phone_number_2,website,logo },
+            { business_owner_id: business_owner_id, name, address, phone_number_1, phone_number_2, website, logo },
             { transaction: transactionScope }
         );
 
@@ -76,7 +86,7 @@ exports.editShop = async (req, res, next) => {
 
         await transactionScope.commit();
 
-        return res.status(200).json({ status: true, message: 'Shop updated successfully', shop });
+        return res.status(201).json({ status: true, message: 'Shop updated successfully', shop });
     } catch (error) {
         await transactionScope.rollback();
         console.error(error);
@@ -98,7 +108,11 @@ exports.deleteShop = async (req, res, next) => {
             return res.status(404).json({ status: false, message: 'Shop not found' });
         }
 
-        await shop.destroy({ transaction: transactionScope });
+        //await shop.destroy({ transaction: transactionScope });
+        await db.shop.update({ status: false }, {
+            where: { id: shop_id },
+            transaction: transactionScope
+        });
 
         await transactionScope.commit();
 

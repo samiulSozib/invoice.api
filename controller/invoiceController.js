@@ -28,9 +28,9 @@ exports.getInvoiceList = async (req, res) => {
 
     const whereClause = {};
 
-        if (business_owner_id) {
-          whereClause.business_owner_id = business_owner_id;
-        }
+    if (business_owner_id) {
+      whereClause.business_owner_id = business_owner_id;
+    }
 
     // const whereClause = { business_owner_id };
 
@@ -201,6 +201,9 @@ exports.getInvoiceById = async (req, res, next) => {
 exports.createInvoice = async (req, res, next) => {
   const transactionScope = await sequelize.transaction();
   const business_owner_id = req.business_owner_id;
+  const business_owner = req.business_owner;
+
+
 
   try {
     const {
@@ -214,7 +217,7 @@ exports.createInvoice = async (req, res, next) => {
       status,
       date,
       shipping_cost,
-      over_due,
+    
       payable_date,
       items, // This should be an array of invoice items
     } = req.body;
@@ -228,9 +231,29 @@ exports.createInvoice = async (req, res, next) => {
         });
     }
 
+    const invoiceCount = await db.invoice.count({ where: { business_owner_id: business_owner_id } });
+    if (!business_owner.is_premium) {
+      
+
+      if (invoiceCount >= 10) {
+        await transactionScope.rollback();
+        return res.status(400).json({ status: false, message: 'account limit reached' });
+      }
+    }
+
+    // Next invoice serial number
+    const nextInvoiceNumber = String(invoiceCount + 1).padStart(8, '0');
+
+
+    
+
+    // Final invoice number
+    const invoice_number = `INV-${business_owner_id}-${nextInvoiceNumber}`;
+
     // Create invoice
     const invoice = await db.invoice.create(
       {
+        invoice_number,
         business_owner_id,
         client_id,
         shop_id,
@@ -242,7 +265,6 @@ exports.createInvoice = async (req, res, next) => {
         status,
         date,
         shipping_cost,
-        over_due,
         payable_date,
       },
       { transaction: transactionScope }
@@ -264,6 +286,15 @@ exports.createInvoice = async (req, res, next) => {
     await db.invoiceItem.bulkCreate(invoiceItems, {
       transaction: transactionScope,
     });
+ // 4️⃣ Update Client total_due
+    await db.client.increment(
+      { total_due: due|| 0 },
+      {
+        where: { id: invoice.client_id },
+        transaction: transactionScope,
+      }
+    );
+
 
     // 3️⃣ Update Business Owner Totals
     await db.businessOwner.increment(
@@ -292,13 +323,31 @@ exports.createInvoice = async (req, res, next) => {
       note: `Invoice #${invoice.id} created with total ${total}, due ${due}.`,
     }, { transaction: transactionScope });
 
+    const new_invoice = await db.invoice.findOne({
+      where: {
+        id: invoice.id,
+      },
+      include: [
+        {
+          model: db.invoiceItem,
+        },
+        {
+          model: db.client
+        },
+        {
+          model: db.shop
+        }
+      ],
+      transaction: transactionScope,
+    });
+
 
     await transactionScope.commit();
 
     return res.status(201).json({
       status: true,
       message: "Invoice created successfully",
-      invoice_id: invoice.id,
+      invoice: new_invoice,
     });
   } catch (error) {
     if (transactionScope) await transactionScope.rollback();
@@ -392,14 +441,7 @@ exports.payDue = async (req, res) => {
     );
 
 
-        // 5️⃣ Update Business Owner totla seal
-    await db.businessOwner.increment(
-      { total_sales_amount: payment_amount },
-      {
-        where: { id: business_owner_id },
-        transaction: transactionScope,
-      }
-    );
+
 
     // 6️⃣ Create Transaction Log for Payment
     await db.transactionLog.create({
@@ -418,7 +460,7 @@ exports.payDue = async (req, res) => {
 
     await transactionScope.commit();
 
-    return res.status(200).json({
+    return res.status(201).json({
       status: true,
       message: newStatus === "paid"
         ? "Invoice fully paid"

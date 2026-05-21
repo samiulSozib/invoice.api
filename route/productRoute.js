@@ -1,7 +1,10 @@
 const router=require('express').Router()
-const { getProducts, getProductsByCategoryId, createProduct, editProduct, deleteProduct, getProductById }=require('../controller/productController');
+const { getProducts, getProductsByCategoryId, createProduct, editProduct, deleteProduct, getProductById, getBestSellingProducts }=require('../controller/productController');
 const authenticateToken = require('../middleware/authMiddleware');
 
+
+
+router.get('/best-selling-products',authenticateToken,getBestSellingProducts)
 
 router.get('/',authenticateToken,getProducts)
 router.get('/category/:category_id',authenticateToken,getProductsByCategoryId)

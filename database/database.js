@@ -6,19 +6,19 @@ const { Sequelize, DataTypes } = require('sequelize')
 //     pool: { max: 5, min: 0, idle: 10000 }
 // })
 
-// const sequelize = new Sequelize('invoice', 'root', '', {
-//     host: 'localhost',
-//     logging: true,
-//     dialect: 'mysql',
-//     pool: { max: 5, min: 0, idle: 10000 }
-// })
-
-const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.DATABASE_USER, process.env.DATABASE_PASSWORD, {
-  host: 'localhost',
-  logging: true,
-  dialect: 'mysql',
-  pool: { max: 5, min: 0, idle: 10000 }
+const sequelize = new Sequelize('invoice_api', 'root', '', {
+    host: 'localhost',
+    logging: true,
+    dialect: 'mysql',
+    pool: { max: 5, min: 0, idle: 10000 }
 })
+
+// const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.DATABASE_USER, process.env.DATABASE_PASSWORD, {
+//   host: 'localhost',
+//   logging: true,
+//   dialect: 'mysql',
+//   pool: { max: 5, min: 0, idle: 10000 }
+// })
 
 sequelize.authenticate()
     .then(() => {
@@ -59,9 +59,6 @@ db.product=require("../model/product")(sequelize,DataTypes)
 db.shop=require("../model/shop")(sequelize,DataTypes)
 db.productImage=require("../model/product_image")(sequelize,DataTypes)
 db.transactionLog=require("../model/transactionLog")(sequelize,DataTypes)
-db.supplier = require("../model/supplier")(sequelize, DataTypes)
-db.reseller = require("../model/reseller")(sequelize, DataTypes)
-db.topUpTransaction = require("../model/topUpTransaction")(sequelize, DataTypes)
 db.admin=require('../model/admin')(sequelize,DataTypes)
 
 
@@ -129,70 +126,10 @@ db.transactionLog.belongsTo(db.invoice, { foreignKey: 'invoice_id' });
 
 // relationd
 
-// =============================
-// Top-Up System Relations
-// =============================
 
-// BusinessOwner → Supplier
-db.businessOwner.hasMany(db.supplier, {
-  foreignKey: "business_owner_id",
-  onDelete: "CASCADE"
-});
-db.supplier.belongsTo(db.businessOwner, {
-  foreignKey: "business_owner_id"
-});
 
-// BusinessOwner → Reseller
-db.businessOwner.hasMany(db.reseller, {
-  foreignKey: "business_owner_id",
-  onDelete: "CASCADE"
-});
-db.reseller.belongsTo(db.businessOwner, {
-  foreignKey: "business_owner_id"
-});
 
-// BusinessOwner → TopUpTransaction
-db.businessOwner.hasMany(db.topUpTransaction, {
-  foreignKey: "business_owner_id",
-  onDelete: "CASCADE"
-});
-db.topUpTransaction.belongsTo(db.businessOwner, {
-  foreignKey: "business_owner_id"
-});
 
-// =============================
-// Supplier Transactions
-// =============================
 
-// Each supplier can have multiple top-up transactions (as supplier)
-db.supplier.hasMany(db.topUpTransaction, {
-  foreignKey: "supplier_id",
-  constraints: false,  // because this relation is optional
-  scope: {
-    transaction_type: ["purchase", "sale", "supplier_payment"]
-  }
-});
-db.topUpTransaction.belongsTo(db.supplier, {
-  foreignKey: "supplier_id",
-  constraints: false
-});
-
-// =============================
-// Reseller Transactions
-// =============================
-
-// Each reseller can have multiple top-up transactions (as reseller)
-db.reseller.hasMany(db.topUpTransaction, {
-  foreignKey: "reseller_id",
-  constraints: false,  // because this relation is optional
-  scope: {
-    transaction_type: ["sale", "reseller_payment"]
-  }
-});
-db.topUpTransaction.belongsTo(db.reseller, {
-  foreignKey: "reseller_id",
-  constraints: false
-});
-// relation for top up
 
 module.exports = db

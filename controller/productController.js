@@ -1,10 +1,9 @@
 const { Op, where } = require('sequelize');
-const {sequelize}=require('../database/database')
-const db=require('../database/database')
+const { sequelize } = require('../database/database')
+const db = require('../database/database')
 
 
 // get products
-
 
 exports.getProducts = async (req, res) => {
   try {
@@ -69,7 +68,7 @@ exports.getProducts = async (req, res) => {
     // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
       where: whereClause,
-      include:[{model:db.productCategory}],
+      include: [{ model: db.productCategory }],
       offset,
       limit,
       order: [[sort_by, order]],
@@ -162,7 +161,7 @@ exports.getProductsByCategoryId = async (req, res) => {
     // ---------------- Query ----------------
     const { count, rows: products } = await db.product.findAndCountAll({
       where: whereClause,
-      include:[{model:db.productCategory}],
+      include: [{ model: db.productCategory }],
       offset,
       limit,
       order: [[sort_by, order]],
@@ -192,107 +191,168 @@ exports.getProductsByCategoryId = async (req, res) => {
 
 // Create Product
 exports.createProduct = async (req, res, next) => {
-    const transactionScope = await sequelize.transaction();
-    const business_owner_id=req.business_owner_id
+  const transactionScope = await sequelize.transaction();
+  const business_owner_id = req.business_owner_id
 
-    const { product_category_id, name, unit_price,unit_of_measure } = req.body;
+  const { product_category_id, name, unit_price, unit_of_measure } = req.body;
 
-    try {
-        const product = await db.product.create(
-            { business_owner_id, product_category_id,name,unit_price,unit_of_measure },
-            { transaction: transactionScope }
-        );
+  try {
+    const product = await db.product.create(
+      { business_owner_id, product_category_id, name, unit_price, unit_of_measure },
+      { transaction: transactionScope }
+    );
 
-        await transactionScope.commit();
+    await transactionScope.commit();
 
-        return res.status(201).json({ status: true, message: 'Product created successfully', product });
-    } catch (error) {
-        if (transactionScope) await transactionScope.rollback();
-        console.error(error);
-        return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
-    }
+    return res.status(201).json({ status: true, message: 'Product created successfully', product });
+  } catch (error) {
+    if (transactionScope) await transactionScope.rollback();
+    console.error(error);
+    return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
+  }
 };
 
 
 // Edit Product
 exports.editProduct = async (req, res, next) => {
-    const transactionScope = await sequelize.transaction();
-    const { product_id } = req.params; // Assuming the product ID is passed as a parameter
-    const {product_category_id, name,unit_price, unit_of_measure } = req.body;
+  const transactionScope = await sequelize.transaction();
+  const { product_id } = req.params; // Assuming the product ID is passed as a parameter
+  const { product_category_id, name, unit_price, unit_of_measure } = req.body;
 
-    try {
-        const product = await db.product.findByPk(product_id, { transaction: transactionScope });
+  try {
+    const product = await db.product.findByPk(product_id, { transaction: transactionScope });
 
-        if (!product) {
-            return res.status(404).json({ status: false, message: 'Product not found' });
-        }
-
-        await product.update(
-            { product_category_id,name, unit_price,unit_of_measure },
-            { transaction: transactionScope }
-        );
-
-        const new_product=await db.product.findByPk(product_id)
-
-        await transactionScope.commit();
-
-        return res.status(200).json({ status: true, message: 'Product updated successfully', product:new_product });
-    } catch (error) {
-        if (transactionScope) await transactionScope.rollback();
-        console.error(error);
-        return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
+    if (!product) {
+      return res.status(404).json({ status: false, message: 'Product not found' });
     }
+
+    await product.update(
+      { product_category_id, name, unit_price, unit_of_measure },
+      { transaction: transactionScope }
+    );
+
+    const new_product = await db.product.findByPk(product_id)
+
+    await transactionScope.commit();
+
+    return res.status(201).json({ status: true, message: 'Product updated successfully', product: new_product });
+  } catch (error) {
+    if (transactionScope) await transactionScope.rollback();
+    console.error(error);
+    return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
+  }
 };
 
 
 // Delete Product
 exports.deleteProduct = async (req, res, next) => {
-    const transactionScope = await sequelize.transaction();
-    const { product_id } = req.params;
+  const transactionScope = await sequelize.transaction();
+  const { product_id } = req.params;
 
 
-    try {
-        const product = await db.product.findByPk(product_id, { transaction: transactionScope });
+  try {
+    const product = await db.product.findByPk(product_id, { transaction: transactionScope });
 
-        if (!product) {
-            return res.status(404).json({ status: false, message: 'Product not found' });
-        }
-
-        await product.destroy({ transaction: transactionScope });
-
-        await transactionScope.commit();
-
-        return res.status(200).json({ status: true, message: 'Product deleted successfully' });
-    } catch (error) {
-        if (transactionScope) await transactionScope.rollback();
-        console.error(error);
-        return res.status(503).json({ status: false, message: 'Internal Server Error' });
+    if (!product) {
+      return res.status(404).json({ status: false, message: 'Product not found' });
     }
+
+    await product.destroy({ transaction: transactionScope });
+
+    await transactionScope.commit();
+
+    return res.status(200).json({ status: true, message: 'Product deleted successfully' });
+  } catch (error) {
+    if (transactionScope) await transactionScope.rollback();
+    console.error(error);
+    return res.status(503).json({ status: false, message: 'Internal Server Error' });
+  }
 };
 
 
 // Get Product by ID
 exports.getProductById = async (req, res, next) => {
-    const transactionScope = await sequelize.transaction();
-    const { product_id } = req.params; // Assuming the product ID is passed as a parameter
+  const transactionScope = await sequelize.transaction();
+  const { product_id } = req.params; // Assuming the product ID is passed as a parameter
 
-    try {
-        const product = await db.product.findByPk(
-            product_id,
-            { transaction: transactionScope }
-        );
-        console.log(product)
+  try {
+    const product = await db.product.findByPk(
+      product_id,
+      { transaction: transactionScope }
+    );
+    console.log(product)
 
-        if (!product) {
-            return res.status(404).json({ status: false, message: 'Product not found', product: null });
-        }
-
-        await transactionScope.commit();
-
-        return res.status(200).json({ status: true, message: 'Product fetched successfully', product });
-    } catch (error) {
-        if (transactionScope) await transactionScope.rollback();
-        console.error(error);
-        return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
+    if (!product) {
+      return res.status(404).json({ status: false, message: 'Product not found', product: null });
     }
+
+    await transactionScope.commit();
+
+    return res.status(200).json({ status: true, message: 'Product fetched successfully', product });
+  } catch (error) {
+    if (transactionScope) await transactionScope.rollback();
+    console.error(error);
+    return res.status(503).json({ status: false, message: 'Internal Server Error', product: null });
+  }
+};
+
+
+// GET /best-selling-products - Best Selling Products by Quantity
+exports.getBestSellingProducts = async (req, res) => {
+  try {
+    const business_owner_id = req.business_owner_id;
+
+    const bestSellingProducts = await db.invoiceItem.findAll({
+      attributes: [
+        'product_name',
+        'unit_of_measure',
+        [
+          sequelize.literal('SUM(quantity)'),
+          'total_quantity_sold'
+        ],
+        [
+          sequelize.literal('SUM(invoice_item.total)'),  // Fixed: specify table
+          'total_revenue'
+        ],
+        [
+          sequelize.literal('AVG(product_price)'),
+          'average_price'
+        ],
+        [
+          sequelize.literal('COUNT(DISTINCT invoice_id)'),
+          'invoice_count'
+        ]
+      ],
+      include: [
+        {
+          model: db.invoice,
+          where: {
+            business_owner_id: business_owner_id
+          },
+          attributes: [],
+          required: true
+        }
+      ],
+      group: ['product_name', 'unit_of_measure'],
+      order: [
+        [sequelize.literal('total_quantity_sold'), 'DESC']
+      ],
+      limit: 10,
+      subQuery: false
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Best selling products fetched successfully",
+      products: bestSellingProducts
+    });
+
+  } catch (error) {
+    console.error(error + "ffd");
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+      products: []
+    });
+  }
 };

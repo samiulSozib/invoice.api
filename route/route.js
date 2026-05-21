@@ -1,93 +1,56 @@
-const authRouter=require('./authRoute')
-const cardRoute=require('./cardRoute')
-const categoryRoute=require('./categoryRoute')
-const countryRoute=require('./countryRoute')
-const noteRote=require('./noteRoute')
-const clientCustomerRoute=require('./clientCustomerRoute')
-const businessEmailRoute=require('./businessEmailRoute')
-const shopRoute=require('./shopRoute')
-const productCategoriesRoute=require('./productCategoryRoute')
-const productRoute=require('./productRoute')
-const invoiceRoute=require('./invoiceRoute')
-const transactionLogRoute=require('./transactionLogRoute')
-const supplierRoute=require('./supplierRoute')
-const resellerRoute=require('./resellerRoute')
-const topUpRoute=require('./topUpRouteTransactionRoute')
-const adminRoute=require('./adminRoute')
+const authRouter = require('./authRoute')
+const shopRoute = require('./shopRoute')
+const productCategoriesRoute = require('./productCategoryRoute')
+const productRoute = require('./productRoute')
+const invoiceRoute = require('./invoiceRoute')
+const transactionLogRoute = require('./transactionLogRoute')
+const adminRoute = require('./adminRoute')
+const clientRoute = require('./clientRoute')
 
 
 const routes = [
     {
-        path:'/admin',
-        handler:adminRoute
+        path:'/client',
+        handler:clientRoute
     },
     {
-        path:'/topup',
-        handler:topUpRoute
+        path: '/admin',
+        handler: adminRoute
+    },
+
+    {
+        path: '/transaction-log',
+        handler: transactionLogRoute
     },
     {
-        path:'/resellers',
-        handler:resellerRoute
+        path: '/invoice',
+        handler: invoiceRoute
     },
     {
-        path:'/suppliers',
-        handler:supplierRoute
+        path: '/products',
+        handler: productRoute
     },
     {
-        path:'/transaction-log',
-        handler:transactionLogRoute
+        path: '/product-categories',
+        handler: productCategoriesRoute
     },
     {
-        path:'/invoice',
-        handler:invoiceRoute
+        path: '/shops',
+        handler: shopRoute
     },
+
+
     {
-        path:'/products',
-        handler:productRoute
-    },
-    {
-        path:'/product-categories',
-        handler:productCategoriesRoute
-    },
-    {
-        path:'/shops',
-        handler:shopRoute
-    },
-    {
-        path:'/business-emails',
-        handler:businessEmailRoute
-    },
-    {
-        path:'/client-customers',
-        handler:clientCustomerRoute
-    },
-    {
-        path:'/notes',
-        handler:noteRote
-    },
-    {
-        path:'/countries',
-        handler:countryRoute
-    },
-    {
-        path:'/categories',
-        handler:categoryRoute
-    },
-    {
-        path:'/card',
-        handler:cardRoute
-    },
-    {
-        path:'/auth',
-        handler:authRouter
+        path: '/auth',
+        handler: authRouter
     },
     {
         path: '/',
-        handler: (req,res)=>{
-            res.send({msg:'Welcome'})
+        handler: (req, res) => {
+            res.send({ msg: 'Welcome' })
         }
     },
-   
+
 ]
 
 module.exports = (app) => {

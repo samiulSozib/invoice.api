@@ -3,8 +3,8 @@ module.exports = (sequelize, DataTypes) => {
         name: {
             type: DataTypes.STRING,
         },
-        address:{
-            type:DataTypes.STRING
+        address: {
+            type: DataTypes.STRING
         },
         phone_number: {
             type: DataTypes.CHAR(15),
@@ -17,19 +17,34 @@ module.exports = (sequelize, DataTypes) => {
         },
         total_sales_amount: {
             type: DataTypes.FLOAT,
+            defaultValue: 0
         },
         total_unpaid_amount: {
             type: DataTypes.FLOAT,
+            defaultValue: 0
         },
-        password:{
-            type:DataTypes.STRING
+        password: {
+            type: DataTypes.STRING
         },
-        date_of_birth:{
-            type:DataTypes.CHAR(15)
+        date_of_birth: {
+            type: DataTypes.CHAR(15)
         },
-        status:{
-            type:DataTypes.BOOLEAN
+        status: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
+        },
+        is_premium: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        subscription_expiry_date: {
+            type: DataTypes.DATE
+        },
+        type: {
+            type: DataTypes.ENUM('business_owner', 'employee', 'guest'),
+            defaultValue: 'business_owner'
         }
+
     }, {
         timestamps: true
     });

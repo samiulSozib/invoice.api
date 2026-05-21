@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
     const Client = sequelize.define('client', {
-        business_owner_id:{
-            type:DataTypes.INTEGER
+        business_owner_id: {
+            type: DataTypes.INTEGER
         },
         name: {
             type: DataTypes.TEXT
@@ -13,8 +13,13 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.TEXT
         },
         total_due: {
-            type: DataTypes.FLOAT
+            type: DataTypes.FLOAT,
+            defaultValue: 0
         },
+        status:{
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
+        }
     }, {
         timestamps: false
     });

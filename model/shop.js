@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
     const Shop = sequelize.define('shop', {
-        business_owner_id:{
-            type:DataTypes.INTEGER
+        business_owner_id: {
+            type: DataTypes.INTEGER
         },
         name: {
             type: DataTypes.STRING,
@@ -18,8 +18,12 @@ module.exports = (sequelize, DataTypes) => {
         website: {
             type: DataTypes.STRING,
         },
-        logo:{
-            type:DataTypes.STRING
+        logo: {
+            type: DataTypes.STRING
+        },
+        status:{
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
         }
     }, {
         timestamps: true

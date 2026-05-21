@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.FLOAT
         },
         discount_type: {
-            type: DataTypes.STRING 
+            type: DataTypes.STRING
         },
         vat: {
             type: DataTypes.FLOAT
